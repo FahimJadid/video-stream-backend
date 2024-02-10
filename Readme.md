@@ -1,4 +1,4 @@
-# Backend
+# Zamma Backend
 
 Project Model for the backend of the application.
 
