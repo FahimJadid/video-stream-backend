@@ -9,6 +9,7 @@ import {
 } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
 const generateAccessAndRefreshTokens = async (userId) => {
   try {
@@ -52,16 +53,18 @@ const registerUser = asyncHandler(async (req, res) => {
 
   //   console.log(req.files);
   const avatarLocalPath = req.files?.avatar[0]?.path;
-  //   const coverImageLocalPath = req.files?.coverImage[0]?.path;
+  const coverImageLocalPath = req.files?.coverImage[0]?.path || "";
 
-  let coverImageLocalPath;
-  if (
-    req.files &&
-    Array.isArray(req.files.coverImage) &&
-    req.files.coverImage.length > 0
-  ) {
-    coverImageLocalPath = req.files.coverImage[0].path;
-  }
+  // let coverImageLocalPath;
+  // if (
+  //   req.files &&
+  //   Array.isArray(req.files.coverImage) &&
+  //   req.files.coverImage.length > 0
+  // ) {
+  //   coverImageLocalPath = req.files.coverImage[0].path;
+  // } else {
+  //   coverImageLocalPath = "";
+  // }
 
   if (!avatarLocalPath) {
     throw new ApiError(400, "Avatar file is required");
@@ -163,7 +166,7 @@ const logoutUser = asyncHandler(async (req, res) => {
   await User.findByIdAndUpdate(
     req.user._id,
     {
-      $set: { refreshToken: undefined },
+      $unset: { refreshToken: 1 }, // this removes the field from the document
     },
     { new: true }
   );
@@ -282,7 +285,7 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
 const getCurrentUser = asyncHandler(async (req, res) => {
   return res
     .status(200)
-    .json(200, req.user, "User details fetched successfully");
+    .json(new ApiResponse(200, req.user, "User details fetched successfully"));
 });
 
 const updateAccountDetails = asyncHandler(async (req, res) => {
@@ -299,7 +302,9 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
       $set: { fullname, email },
     },
     { new: true }
-  ).select("-password");
+  )
+    .select("-password")
+    .exec();
 
   return res
     .status(200)
