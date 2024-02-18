@@ -129,26 +129,28 @@ const updateVideo = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid videoId");
   }
 
-  if (!title && !description) {
+  if (!title && !description && !thumbnailLocalPath) {
     throw new ApiError(400, "At least one field is required");
-  }
-
-  if (!thumbnailLocalPath) {
-    throw new ApiError(400, "Avatar file is required");
   }
 
   const video = await Video.findById(videoId);
 
-  const oldVideoPublicId = video.thumbnail.split("/").pop().split(".")[0];
+  let thumbnailUrl = video.thumbnail;
 
-  if (oldVideoPublicId) {
-    await deleteFromCloudinary(oldVideoPublicId);
-  }
+  if (thumbnailLocalPath) {
+    const oldVideoPublicId = video.thumbnail?.split("/").pop().split(".")[0];
 
-  const thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
+    if (oldVideoPublicId) {
+      await deleteFromCloudinary(oldVideoPublicId);
+    }
 
-  if (!thumbnail.url) {
-    throw new ApiError(400, "Failed to upload Thumbnail");
+    const thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
+
+    if (!thumbnail || !thumbnail.url) {
+      throw new ApiError(400, "Failed to upload Thumbnail");
+    }
+
+    thumbnailUrl = thumbnail.url;
   }
 
   // Find the video by its id
@@ -158,24 +160,11 @@ const updateVideo = asyncHandler(async (req, res) => {
       $set: {
         title,
         description,
-        thumbnail: thumbnail.url,
+        thumbnail: thumbnailUrl,
       },
     },
     { new: true }
   ).exec();
-
-  // // Check if the video exists
-  // if (!video) {
-  //   throw new ApiError(404, "Video not found");
-  // }
-
-  // // Update video details
-  // video.title = title || video.title;
-  // video.description = description || video.description;
-  // video.thumbnail = thumbnail || video.thumbnail;
-
-  // // Save the updated video
-  // video = await video.save();
 
   return res
     .status(200)
