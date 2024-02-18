@@ -4,7 +4,10 @@ import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import {
+  uploadOnCloudinary,
+  deleteFromCloudinary,
+} from "../utils/cloudinary.js";
 
 const getAllVideos = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
@@ -95,12 +98,90 @@ const publishAVideo = asyncHandler(async (req, res) => {
 
 const getVideoById = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
-  //TODO: get video by id
+
+  console.log(videoId);
+
+  // Check if the videoId is a valid ObjectId
+  if (!isValidObjectId(videoId)) {
+    throw new ApiError(400, "Invalid videoId");
+  }
+
+  // Find the video by its id
+  const video = await Video.findById(videoId);
+
+  // Check if the video exists
+  if (!video) {
+    throw new ApiError(404, "Video not found");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, video, "Video retrieved successfully"));
 });
 
 const updateVideo = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
-  //TODO: update video details like title, description, thumbnail
+  const { title, description } = req.body;
+  const thumbnailLocalPath = req.file?.path;
+
+  // Check if the videoId is a valid ObjectId
+  if (!isValidObjectId(videoId)) {
+    throw new ApiError(400, "Invalid videoId");
+  }
+
+  if (!title && !description) {
+    throw new ApiError(400, "At least one field is required");
+  }
+
+  if (!thumbnailLocalPath) {
+    throw new ApiError(400, "Avatar file is required");
+  }
+
+  const video = await Video.findById(videoId);
+
+  const oldVideoPublicId = video.thumbnail.split("/").pop().split(".")[0];
+
+  if (oldVideoPublicId) {
+    await deleteFromCloudinary(oldVideoPublicId);
+  }
+
+  const thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
+
+  if (!thumbnail.url) {
+    throw new ApiError(400, "Failed to upload Thumbnail");
+  }
+
+  // Find the video by its id
+  const updateVideoDetails = await Video.findByIdAndUpdate(
+    videoId,
+    {
+      $set: {
+        title,
+        description,
+        thumbnail: thumbnail.url,
+      },
+    },
+    { new: true }
+  ).exec();
+
+  // // Check if the video exists
+  // if (!video) {
+  //   throw new ApiError(404, "Video not found");
+  // }
+
+  // // Update video details
+  // video.title = title || video.title;
+  // video.description = description || video.description;
+  // video.thumbnail = thumbnail || video.thumbnail;
+
+  // // Save the updated video
+  // video = await video.save();
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, updateVideoDetails, "Video updated successfully")
+    );
 });
 
 const deleteVideo = asyncHandler(async (req, res) => {
