@@ -55,7 +55,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Title and description are required");
   }
 
-  console.log(req.files);
+  // console.log(req.files);
   const videoLocalPath = req.files?.videoFile[0]?.path;
   const thumbnailLocalPath = req.files?.thumbnail[0]?.path;
 
@@ -71,8 +71,8 @@ const publishAVideo = asyncHandler(async (req, res) => {
   const video = await uploadOnCloudinary(videoLocalPath);
   const thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
 
-  console.log(video);
-  console.log(thumbnail);
+  // console.log(video);
+  // console.log(thumbnail);
 
   if (!video.url) {
     throw new ApiError(500, "Failed to upload video");
@@ -175,11 +175,82 @@ const updateVideo = asyncHandler(async (req, res) => {
 
 const deleteVideo = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
-  //TODO: delete video
+
+  // Check if the videoId is a valid ObjectId
+  if (!isValidObjectId(videoId)) {
+    throw new ApiError(400, "Invalid videoId");
+  }
+
+  // TODO: delete video
+  try {
+    const video = await Video.findById(videoId);
+
+    if (!video) {
+      throw new ApiError(404, "Video not found");
+    }
+
+    const oldThumbnailPublicId = video.thumbnail
+      ?.split("/")
+      .pop()
+      .split(".")[0];
+
+    const oldVideoPublicId = video.videoFile?.split("/").pop().split(".")[0];
+
+    // console.log(oldVideoPublicId);
+
+    if (oldThumbnailPublicId) {
+      await deleteFromCloudinary(oldThumbnailPublicId);
+    }
+
+    // console.log(oldVideoPublicId);
+
+    if (oldVideoPublicId) {
+      await deleteFromCloudinary(oldVideoPublicId);
+    }
+    // Delete the video from the database
+    await Video.findByIdAndDelete(videoId);
+
+    // Return a success response
+    res.status(200).json(new ApiResponse(200, "Video deleted successfully"));
+  } catch (error) {
+    // Handle any errors
+    throw new ApiError(500, error?.message || "Failed to delete video");
+  }
 });
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
+
+  // Check if the videoId is a valid ObjectId
+  if (!isValidObjectId(videoId)) {
+    throw new ApiError(400, "Invalid videoId");
+  }
+
+  try {
+    // Find the video by its ID
+    const video = await Video.findById(videoId);
+
+    if (!video) {
+      throw new ApiError(404, "Video not found");
+    }
+
+    // Toggle the publish status of the video
+    video.isPublished = !video.isPublished;
+
+    // Save the updated video
+    await video.save();
+
+    // Return a success response
+    res
+      .status(200)
+      .json(new ApiResponse(200, "Publish status toggled successfully"));
+  } catch (error) {
+    // Handle any errors
+    throw new ApiError(
+      500,
+      error?.message || "Failed to toggle publish status"
+    );
+  }
 });
 
 export {
