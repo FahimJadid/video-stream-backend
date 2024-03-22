@@ -2,15 +2,8 @@
 
 ## Description
 
-This project is a backend service for a video streaming application. It handles user authentication, video uploads, and video streaming.
-
-## Features
-
-Sure, here's how you can update the project description to include the new features:
-
-## Description
-
 This project is a backend service for a video streaming application. It handles user authentication, video uploads, video streaming, and provides additional features for enhanced user interaction.
+
 
 ## Features
 
