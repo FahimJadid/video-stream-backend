@@ -50,6 +50,7 @@ To run this project, follow these steps:
 4. Add .env file
 
 ## .env example
+```
 PORT=8000
 MONGO_URI=
 
@@ -63,6 +64,7 @@ CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 
+```
 
 ## Usage
 
